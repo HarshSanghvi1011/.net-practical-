@@ -1,0 +1,194 @@
+using Practical7.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace Practical7.Controllers
+{
+    public class HomeController : Controller
+    {
+        public static List<Feedback> feedbackList = new List<Feedback>();
+
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        public ActionResult GiveFeedback()
+        {
+            return View();
+        }
+        [HttpPost]
+
+        public ActionResult GiveFeedback(Feedback feedback)
+        {
+            if (ModelState.IsValid)
+            {
+                feedbackList.Add(feedback);
+                return RedirectToAction("ViewFeedback");
+            }
+
+            return View(feedback);
+        }
+
+        public ActionResult ViewFeedback()
+        {
+            return View(feedbackList);
+        }
+    }
+}
+Source : Models/Feedback.cs
+Code :
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Web;
+
+namespace Practical7.Models
+{
+    public class Feedback
+    {
+        [Required]
+        public string EnrollmentNumber { get; set; }
+
+        [Required]
+        public string StudentName { get; set; }
+
+        [Required]
+        public string Subject { get; set; }
+
+        [Required]
+        public int Rating { get; set; }
+
+        public string Comment { get; set; }
+    }
+}
+Source : Views/Home/GiveFeedback.cshtml
+Code :
+@model Practical7.Models.Feedback
+
+@{
+    ViewBag.Title = "Give Feedback";
+}
+
+<h2>Student Feedback Portal</h2>
+
+<div class="feedback-form">
+
+    @using (Html.BeginForm())
+    {
+        <div class="form-group">
+            <label>Enrollment Number</label>
+            @Html.TextBoxFor(m => m.EnrollmentNumber, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.EnrollmentNumber)
+        </div>
+
+        <div class="form-group">
+            <label>Student Name</label>
+            @Html.TextBoxFor(m => m.StudentName, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.StudentName)
+        </div>
+
+        <div class="form-group">
+            <label>Subject</label>
+            @Html.TextBoxFor(m => m.Subject, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.Subject)
+        </div>
+        <div class="form-group">
+
+            <label>Rating</label>
+            @Html.TextBoxFor(m => m.Rating, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.Rating)
+        </div>
+
+        <div class="form-group">
+            <label>Comment</label>
+            @Html.TextAreaFor(m => m.Comment, new { @class = "form-control" })
+        </div>
+
+        <div class="form-group">
+            <input type="submit" value="Submit Feedback" class="submit-btn" />
+        </div>
+    }
+
+    @Html.ActionLink("Back to Home", "Index", "Home")
+
+</div>
+Source : Views/Home/Index.html
+Code :
+@{
+    ViewBag.Title = "Home";
+}
+
+<h2>Marwadi University Department of Com Eng</h2>
+
+<p>Welcome to the Student Feedback Management System.</p>
+<div>
+
+    @Html.ActionLink("Give Feedback", "GiveFeedback", "Home")
+    @Html.ActionLink("View Feedback", "ViewFeedback", "Home")
+</div>
+Source : Views/Home/ViewFeedback.cshtml
+Code :
+@model IEnumerable<Practical7.Models.Feedback>
+
+@{
+    ViewBag.Title = "View Feedback";
+}
+
+<h2>Student Feedback List</h2>
+
+<table class="feedback-table">
+    <tr>
+        <th>Enrollment</th>
+        <th>Student</th>
+        <th>Subject</th>
+        <th>Rating</th>
+        <th>Comment</th>
+    </tr>
+
+    @foreach (var feedback in Model)
+    {
+        <tr>
+            <td>@feedback.EnrollmentNumber</td>
+            <td>@feedback.StudentName</td>
+            <td>@feedback.Subject</td>
+
+            <td>@feedback.Rating</td>
+            <td>@feedback.Comment</td>
+        </tr>
+    }
+</table>
+<br />
+@Html.ActionLink("Give Another Feedback", "GiveFeedback", "Home")
+@Html.ActionLink("Back to Home", "Index", "Home")
+Source : Views/Shared/_Header.cshtml
+Code 
+<h1>Student Feedback Management System</h1>
+<p class="header-subtitle">Student Feedback Portal</p>
+Source : Views/Shared/_Layout.cshtml
+Code :
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Student Feedback Management System</title>
+    <link href="~/Content/Site.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div class="header">
+        @Html.Partial("_Header")
+    </div>
+
+    <div class="container">
+        @RenderBody()
+    </div>
+    <footer>
+        <p>Marwadi University Department of Com Eng</p>
+    </footer>
+</body>
+</html>
