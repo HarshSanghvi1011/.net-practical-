@@ -1,0 +1,726 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Practical8.Models;
+using Practical8.Services;
+namespace Practical8.Controllers
+{
+    public class ProductsController : Controller
+    {
+            ProductService service = new ProductService();
+            // READ: Display all products
+            public ActionResult Index()
+            {
+                return View(service.GetAll());
+            }
+            // CREATE: Display form
+            public ActionResult Create()
+            {
+                return View();
+            }
+            // CREATE: Save product
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public ActionResult Create(Product product)
+            {
+                if (ModelState.IsValid)
+                {
+                    service.Add(product);
+                    return RedirectToAction("Index");
+                }
+                return View(product);
+            }
+            // UPDATE: Display edit form
+            public ActionResult Edit(int id)
+            {
+                Product product = service.GetById(id);
+                if (product == null)
+                    return HttpNotFound();
+                return View(product);
+            }
+            // UPDATE: Save changes
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public ActionResult Edit(Product product)
+            {
+                if (ModelState.IsValid)
+                {
+                    service.Update(product);
+                    return RedirectToAction("Index");
+                }
+
+                return View(product);
+            }
+            // DELETE: Remove product
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public ActionResult Delete(int id)
+            {
+                service.Delete(id);
+                return RedirectToAction("Index");
+            }
+        }
+    }
+Source : Models/Product.cs
+Code : 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+namespace Practical8.Models
+{
+
+        public class Product
+        {
+            public int ProductId { get; set; }
+
+            public string ProductName { get; set; }
+
+            public int Quantity { get; set; }
+
+            public decimal Price { get; set; }
+
+            public string Category { get; set; }
+        }
+    }
+Source: Services/ProductServices.cs
+Code:
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using Practical8.Models;    
+
+namespace Practical8.Services
+{
+        public class ProductService
+        {
+            private string connectionString =
+ConfigurationManager.ConnectionStrings["InventoryConnection"].ConnectionString;
+            // READ: Get all products
+            public List<Product> GetAll()
+            {
+                List<Product> products = new List<Product>();
+            using(SqlConnectioncon=newSqlConnection(connectionString))
+                {
+                    string query = "SELECT * FROM Products";
+                    SqlCommand cmd = new SqlCommand(query, con)
+                    con.Open();
+
+                    SqlDataReader reader = cmd.ExecuteReader()
+                    while (reader.Read())
+                    {
+                        products.Add(new Product
+                        {
+                          ProductId=Convert.ToInt32(reader["ProductId"]),
+                            ProductName=reader["ProductName"].ToString(),
+                            Quantity=Convert.ToInt32(reader["Quantity"]),
+                            Price = Convert.ToDecimal(reader["Price"]),
+                            Category = reader["Category"].ToString()
+                        });
+                    }
+                }
+
+                return products;
+            }
+
+            // READ: Get product by ID
+            public Product GetById(int id)
+            {
+               using(SqlConnectioncon=newSqlConnection(connectionString))
+                {
+              string query = "SELECT * FROM Products WHERE ProductId=@id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    con.Open();
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        return new Product
+                        {
+                          ProductId=Convert.ToInt32(reader["ProductId"]),
+                            ProductName=reader["ProductName"].ToString(),
+                            Quantity=Convert.ToInt32(reader["Quantity"]),
+                            Price = Convert.ToDecimal(reader["Price"]),
+                            Category = reader["Category"].ToString()
+                        };
+                    }
+                }
+                return null;
+            }
+            // CREATE: Add product
+            public void Add(Product p)
+            {
+                using(SqlConnection con= new SqlConnection(connectionString))
+                {
+                    string query = @"INSERT INTO Products
+                (ProductName, Quantity, Price, Category)
+                VALUES (@name, @quantity, @price, @category)";
+
+                    SqlCommand cmd = new SqlCommand(query, con);
+
+                    cmd.Parameters.AddWithValue("@name", p.ProductName);
+                    cmd.Parameters.AddWithValue("@quantity", p.Quantity);
+                    cmd.Parameters.AddWithValue("@price", p.Price);
+                    cmd.Parameters.AddWithValue("@category", p.Category);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            // UPDATE: Edit product
+            public void Update(Product p)
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    string query = @"UPDATE Products SET
+                ProductName=@name,
+                Quantity=@quantity,
+                Price=@price,
+                Category=@category
+                WHERE ProductId=@id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", p.ProductId);
+                    cmd.Parameters.AddWithValue("@name", p.ProductName);
+                    cmd.Parameters.AddWithValue("@quantity", p.Quantity);
+                    cmd.Parameters.AddWithValue("@price", p.Price);
+                    cmd.Parameters.AddWithValue("@category", p.Category);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            // DELETE: Remove product
+            public void Delete(int id)
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    string query = "DELETE FROM Products WHERE ProductId=@id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+    }
+Source: Views/Products/Create.cshtml
+Code:
+@model Practical8.Models.Product
+@{
+    ViewBag.Title = "Add Product";
+}
+<div class="form-card">
+    <h2 class="page-title">Add New Product</h2>
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+        <div class="form-group">
+            <label>Product Name</label>
+            @Html.TextBoxFor(m => m.ProductName,
+                new { @class = "form-input", placeholder = "Enter product name" })
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            @Html.TextBoxFor(m => m.Quantity,
+                new { @class = "form-input", placeholder = "Enter quantity" })
+        </div>
+        <div class="form-group">
+            <label>Price</label>
+            @Html.TextBoxFor(m => m.Price,
+                new { @class = "form-input", placeholder = "Enter price" })
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            @Html.TextBoxFor(m => m.Category,
+                new { @class = "form-input", placeholder = "Enter category" })
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-custom btn-save">
+                Save Product
+            </button>
+            @Html.ActionLink("Back to Products", "Index",
+                null, new { @class = "back-link" })
+        </div>
+    }
+</div>
+Source: Views/Products/Index.cshtml
+Code:
+@model IEnumerable<Practical8.Models.Product>
+@{
+    ViewBag.Title = "Products";
+}
+<div class="page-card">
+    <h2 class="page-title">Inventory Management System</h2>
+    <p>
+        @Html.ActionLink("+ Add New Product", "Create", null,
+            new { @class = "btn-custom btn-add" })
+    </p>
+    <div class="table-wrapper">
+        <table class="product-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Category</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.ProductId</td>
+                        <td>@item.ProductName</td>
+                        <td>@item.Quantity</td>
+                        <td>₹@item.Price</td>
+                        <td>@item.Category</td>
+                        <td>
+                            <div class="action-buttons">
+                                @Html.ActionLink("Edit", "Edit",
+                                    new { id = item.ProductId },
+                                    new { @class = "btn-custom btn-edit" })
+                                @using (Html.BeginForm("Delete", "Products",
+                                    new { id = item.ProductId }, FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn-custom btn-delete"
+                                            onclick="return confirm('Are you sure you want to delete this product?');">
+                                        Delete
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+Source: Views/Products/Edit.cshtml
+Code:	
+@model Practical8.Models.Product
+@{
+    ViewBag.Title = "Edit Product";
+}
+
+<div class="form-card">
+
+    <h2 class="page-title">Edit Product</h2>
+
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        @Html.HiddenFor(m => m.ProductId)
+
+        <div class="form-group">
+            <label>Product Name</label>
+            @Html.TextBoxFor(m => m.ProductName,
+                new { @class = "form-input", placeholder = "Enter product name" })
+        </div>
+
+        <div class="form-group">
+            <label>Quantity</label>
+            @Html.TextBoxFor(m => m.Quantity,
+                new { @class = "form-input", placeholder = "Enter quantity" })
+        </div>
+
+        <div class="form-group">
+            <label>Price</label>
+            @Html.TextBoxFor(m => m.Price,
+                new { @class = "form-input", placeholder = "Enter price" })
+        </div>
+
+        <div class="form-group">
+            <label>Category</label>
+            @Html.TextBoxFor(m => m.Category,
+                new { @class = "form-input", placeholder = "Enter category" })
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-custom btn-edit">
+                Update Product
+            </button>
+
+            @Html.ActionLink("Back to Products", "Index",
+                null, new { @class = "back-link" })
+        </div>
+    }
+
+</div>
+Source: Web.config
+Code: 
+<connectionStrings>
+	<add name="InventoryConnection"
+		 connectionString="Data Source=localhost;Initial Catalog=InventoryDB;Integrated Security=True;TrustServerCertificate=True;Pooling=True;Min Pool Size=3;Max Pool Size=100;Connection Timeout=10;"
+		 providerName="System.Data.SqlClient" />
+</connectionStrings>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Practical8.Models;
+using Practical8.Services;
+namespace Practical8.Controllers
+{
+    public class ProductsController : Controller
+    {
+            ProductService service = new ProductService();
+            // READ: Display all products
+            public ActionResult Index()
+            {
+                return View(service.GetAll());
+            }
+            // CREATE: Display form
+            public ActionResult Create()
+            {
+                return View();
+            }
+            // CREATE: Save product
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public ActionResult Create(Product product)
+            {
+                if (ModelState.IsValid)
+                {
+                    service.Add(product);
+                    return RedirectToAction("Index");
+                }
+                return View(product);
+            }
+            // UPDATE: Display edit form
+            public ActionResult Edit(int id)
+            {
+                Product product = service.GetById(id);
+                if (product == null)
+                    return HttpNotFound();
+                return View(product);
+            }
+            // UPDATE: Save changes
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public ActionResult Edit(Product product)
+            {
+                if (ModelState.IsValid)
+                {
+                    service.Update(product);
+                    return RedirectToAction("Index");
+                }
+
+                return View(product);
+            }
+            // DELETE: Remove product
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public ActionResult Delete(int id)
+            {
+                service.Delete(id);
+                return RedirectToAction("Index");
+            }
+        }
+    }
+Source : Models/Product.cs
+Code : 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+namespace Practical8.Models
+{
+
+        public class Product
+        {
+            public int ProductId { get; set; }
+
+            public string ProductName { get; set; }
+
+            public int Quantity { get; set; }
+
+            public decimal Price { get; set; }
+
+            public string Category { get; set; }
+        }
+    }
+Source: Services/ProductServices.cs
+Code:
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using Practical8.Models;    
+
+namespace Practical8.Services
+{
+        public class ProductService
+        {
+            private string connectionString =
+ConfigurationManager.ConnectionStrings["InventoryConnection"].ConnectionString;
+            // READ: Get all products
+            public List<Product> GetAll()
+            {
+                List<Product> products = new List<Product>();
+            using(SqlConnectioncon=newSqlConnection(connectionString))
+                {
+                    string query = "SELECT * FROM Products";
+                    SqlCommand cmd = new SqlCommand(query, con)
+                    con.Open();
+
+                    SqlDataReader reader = cmd.ExecuteReader()
+                    while (reader.Read())
+                    {
+                        products.Add(new Product
+                        {
+                          ProductId=Convert.ToInt32(reader["ProductId"]),
+                            ProductName=reader["ProductName"].ToString(),
+                            Quantity=Convert.ToInt32(reader["Quantity"]),
+                            Price = Convert.ToDecimal(reader["Price"]),
+                            Category = reader["Category"].ToString()
+                        });
+                    }
+                }
+
+                return products;
+            }
+
+            // READ: Get product by ID
+            public Product GetById(int id)
+            {
+               using(SqlConnectioncon=newSqlConnection(connectionString))
+                {
+              string query = "SELECT * FROM Products WHERE ProductId=@id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    con.Open();
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        return new Product
+                        {
+                          ProductId=Convert.ToInt32(reader["ProductId"]),
+                            ProductName=reader["ProductName"].ToString(),
+                            Quantity=Convert.ToInt32(reader["Quantity"]),
+                            Price = Convert.ToDecimal(reader["Price"]),
+                            Category = reader["Category"].ToString()
+                        };
+                    }
+                }
+                return null;
+            }
+            // CREATE: Add product
+            public void Add(Product p)
+            {
+                using(SqlConnection con= new SqlConnection(connectionString))
+                {
+                    string query = @"INSERT INTO Products
+                (ProductName, Quantity, Price, Category)
+                VALUES (@name, @quantity, @price, @category)";
+
+                    SqlCommand cmd = new SqlCommand(query, con);
+
+                    cmd.Parameters.AddWithValue("@name", p.ProductName);
+                    cmd.Parameters.AddWithValue("@quantity", p.Quantity);
+                    cmd.Parameters.AddWithValue("@price", p.Price);
+                    cmd.Parameters.AddWithValue("@category", p.Category);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            // UPDATE: Edit product
+            public void Update(Product p)
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    string query = @"UPDATE Products SET
+                ProductName=@name,
+                Quantity=@quantity,
+                Price=@price,
+                Category=@category
+                WHERE ProductId=@id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", p.ProductId);
+                    cmd.Parameters.AddWithValue("@name", p.ProductName);
+                    cmd.Parameters.AddWithValue("@quantity", p.Quantity);
+                    cmd.Parameters.AddWithValue("@price", p.Price);
+                    cmd.Parameters.AddWithValue("@category", p.Category);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            // DELETE: Remove product
+            public void Delete(int id)
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    string query = "DELETE FROM Products WHERE ProductId=@id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+    }
+Source: Views/Products/Create.cshtml
+Code:
+@model Practical8.Models.Product
+@{
+    ViewBag.Title = "Add Product";
+}
+<div class="form-card">
+    <h2 class="page-title">Add New Product</h2>
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+        <div class="form-group">
+            <label>Product Name</label>
+            @Html.TextBoxFor(m => m.ProductName,
+                new { @class = "form-input", placeholder = "Enter product name" })
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            @Html.TextBoxFor(m => m.Quantity,
+                new { @class = "form-input", placeholder = "Enter quantity" })
+        </div>
+        <div class="form-group">
+            <label>Price</label>
+            @Html.TextBoxFor(m => m.Price,
+                new { @class = "form-input", placeholder = "Enter price" })
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            @Html.TextBoxFor(m => m.Category,
+                new { @class = "form-input", placeholder = "Enter category" })
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-custom btn-save">
+                Save Product
+            </button>
+            @Html.ActionLink("Back to Products", "Index",
+                null, new { @class = "back-link" })
+        </div>
+    }
+</div>
+Source: Views/Products/Index.cshtml
+Code:
+@model IEnumerable<Practical8.Models.Product>
+@{
+    ViewBag.Title = "Products";
+}
+<div class="page-card">
+    <h2 class="page-title">Inventory Management System</h2>
+    <p>
+        @Html.ActionLink("+ Add New Product", "Create", null,
+            new { @class = "btn-custom btn-add" })
+    </p>
+    <div class="table-wrapper">
+        <table class="product-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Category</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.ProductId</td>
+                        <td>@item.ProductName</td>
+                        <td>@item.Quantity</td>
+                        <td>₹@item.Price</td>
+                        <td>@item.Category</td>
+                        <td>
+                            <div class="action-buttons">
+                                @Html.ActionLink("Edit", "Edit",
+                                    new { id = item.ProductId },
+                                    new { @class = "btn-custom btn-edit" })
+                                @using (Html.BeginForm("Delete", "Products",
+                                    new { id = item.ProductId }, FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn-custom btn-delete"
+                                            onclick="return confirm('Are you sure you want to delete this product?');">
+                                        Delete
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+Source: Views/Products/Edit.cshtml
+Code:	
+@model Practical8.Models.Product
+@{
+    ViewBag.Title = "Edit Product";
+}
+
+<div class="form-card">
+
+    <h2 class="page-title">Edit Product</h2>
+
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        @Html.HiddenFor(m => m.ProductId)
+
+        <div class="form-group">
+            <label>Product Name</label>
+            @Html.TextBoxFor(m => m.ProductName,
+                new { @class = "form-input", placeholder = "Enter product name" })
+        </div>
+
+        <div class="form-group">
+            <label>Quantity</label>
+            @Html.TextBoxFor(m => m.Quantity,
+                new { @class = "form-input", placeholder = "Enter quantity" })
+        </div>
+
+        <div class="form-group">
+            <label>Price</label>
+            @Html.TextBoxFor(m => m.Price,
+                new { @class = "form-input", placeholder = "Enter price" })
+        </div>
+
+        <div class="form-group">
+            <label>Category</label>
+            @Html.TextBoxFor(m => m.Category,
+                new { @class = "form-input", placeholder = "Enter category" })
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-custom btn-edit">
+                Update Product
+            </button>
+
+            @Html.ActionLink("Back to Products", "Index",
+                null, new { @class = "back-link" })
+        </div>
+    }
+
+</div>
+Source: Web.config
+Code: 
+<connectionStrings>
+	<add name="InventoryConnection"
+		 connectionString="Data Source=localhost;Initial Catalog=InventoryDB;Integrated Security=True;TrustServerCertificate=True;Pooling=True;Min Pool Size=3;Max Pool Size=100;Connection Timeout=10;"
+		 providerName="System.Data.SqlClient" />
+</connectionStrings>
